@@ -1,0 +1,8 @@
+# Configuraciones con credenciales
+**/appsettings.Development.json
+**/appsettings.json
+
+# Archivos locales
+**/bin/
+**/obj/
+.vs/
