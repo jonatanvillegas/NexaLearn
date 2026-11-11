@@ -1,0 +1,11 @@
+.git/
+.github/
+.vs/
+**/bin/
+**/obj/
+**/*.user
+**/*.suo
+NexaLearn/appsettings.Development.json
+tests/
+README.md
+paypal.md
