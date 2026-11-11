@@ -7,7 +7,7 @@ namespace NexaLearn.Controllers
     [AllowAnonymous]
     [ApiController]
     [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+    public class WeatherForecastController : BaseController
     {
         private static readonly string[] Summaries = new[]
         {
@@ -16,7 +16,8 @@ namespace NexaLearn.Controllers
 
         private readonly ILogger<WeatherForecastController> _logger;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IHttpContextAccessor httpContextAccessor)
+            : base(httpContextAccessor)
         {
             _logger = logger;
         }
