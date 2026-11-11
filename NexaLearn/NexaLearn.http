@@ -1,4 +1,42 @@
 @NexaLearn_HostAddress = http://localhost:5025
+@token = pega_aqui_el_token_del_login
+
+### Registrar: crea un usuario con el rol Cliente.
+
+POST {{NexaLearn_HostAddress}}/api/auth/registro
+Content-Type: application/json
+
+{
+  "email": "cliente@ejemplo.com",
+  "password": "cliente123"
+}
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@ejemplo.com",
+  "password": "Admin123"
+}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/auth/actual
+Authorization: Bearer {{token}}
+
+### Solo Admin: reemplaza {userId} por el valor recibido al registrar.
+
+PUT {{NexaLearn_HostAddress}}/api/auth/usuarios/{userId}/rol
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rol": "Admin"
+}
+
+###
 
 GET {{NexaLearn_HostAddress}}/weatherforecast/
 Accept: application/json
@@ -7,5 +45,272 @@ Accept: application/json
 
 GET {{NexaLearn_HostAddress}}/openapi/v1.json
 Accept: application/json
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/categorias
+Accept: application/json
+
+###
+
+@categoriaId = 1
+GET {{NexaLearn_HostAddress}}/api/categorias/{{categoriaId}}
+Accept: application/json
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/categorias
+Content-Type: application/json
+
+{
+  "nombre": "Programación",
+  "descripcion": "Cursos de desarrollo de software",
+  "estado": true
+}
+
+###
+
+PUT {{NexaLearn_HostAddress}}/api/categorias/{{categoriaId}}
+Content-Type: application/json
+
+{
+  "nombre": "Desarrollo de software",
+  "descripcion": "Categoría actualizada",
+  "estado": true
+}
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/categorias/{{categoriaId}}
+
+###
+
+@cursoId = 1
+@leccionId = 1
+@inscripcionId = 1
+@pagoId = 1
+@perfilId = 1
+@cursoImagenId = 1
+
+GET {{NexaLearn_HostAddress}}/api/cursos
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/cursos/{{cursoId}}
+
+### Crear curso sin imagen. La categoría debe existir.
+
+POST {{NexaLearn_HostAddress}}/api/cursos
+Content-Type: multipart/form-data; boundary=NexaLearnBoundary
+
+--NexaLearnBoundary
+Content-Disposition: form-data; name="CategoriaId"
+
+{{categoriaId}}
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Titulo"
+
+Curso de C#
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Precio"
+
+25
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Estado"
+
+true
+--NexaLearnBoundary--
+
+### Actualizar sin imagen conserva la existente.
+
+PUT {{NexaLearn_HostAddress}}/api/cursos/{{cursoId}}
+Content-Type: multipart/form-data; boundary=NexaLearnBoundary
+
+--NexaLearnBoundary
+Content-Disposition: form-data; name="CategoriaId"
+
+{{categoriaId}}
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Titulo"
+
+Curso actualizado
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Precio"
+
+30
+--NexaLearnBoundary
+Content-Disposition: form-data; name="Estado"
+
+true
+--NexaLearnBoundary--
+
+### Para adjuntar/reemplazar una imagen utiliza el selector de archivos de Swagger.
+
+GET {{NexaLearn_HostAddress}}/api/cursos/{{cursoId}}/imagen
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/cursos/{{cursoId}}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/lecciones
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/lecciones/{{leccionId}}
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/lecciones
+Content-Type: application/json
+
+{
+  "cursoId": {{cursoId}},
+  "titulo": "Introducción",
+  "descripcion": "Primera lección",
+  "contenido": "Contenido de la lección",
+  "orden": 1,
+  "estado": true
+}
+
+###
+
+PUT {{NexaLearn_HostAddress}}/api/lecciones/{{leccionId}}
+Content-Type: application/json
+
+{
+  "cursoId": {{cursoId}},
+  "titulo": "Introducción actualizada",
+  "orden": 1,
+  "estado": true
+}
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/lecciones/{{leccionId}}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/inscripciones
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/inscripciones/{{inscripcionId}}
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/inscripciones
+Content-Type: application/json
+
+{
+  "userId": "usuario-de-prueba",
+  "cursoId": {{cursoId}},
+  "estado": "PENDIENTE"
+}
+
+###
+
+PUT {{NexaLearn_HostAddress}}/api/inscripciones/{{inscripcionId}}
+Content-Type: application/json
+
+{
+  "userId": "usuario-de-prueba",
+  "cursoId": {{cursoId}},
+  "estado": "ACTIVA"
+}
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/inscripciones/{{inscripcionId}}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/pagos
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/pagos/{{pagoId}}
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/pagos
+Content-Type: application/json
+
+{
+  "inscripcionId": {{inscripcionId}},
+  "monto": 25,
+  "moneda": "USD",
+  "estado": "PENDIENTE"
+}
+
+###
+
+PUT {{NexaLearn_HostAddress}}/api/pagos/{{pagoId}}
+Content-Type: application/json
+
+{
+  "inscripcionId": {{inscripcionId}},
+  "monto": 30,
+  "moneda": "USD",
+  "estado": "PENDIENTE"
+}
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/pagos/{{pagoId}}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/perfiles
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/perfiles/{{perfilId}}
+
+###
+
+POST {{NexaLearn_HostAddress}}/api/perfiles
+Content-Type: application/json
+
+{
+  "userId": "usuario-de-prueba",
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "estado": true
+}
+
+###
+
+PUT {{NexaLearn_HostAddress}}/api/perfiles/{{perfilId}}
+Content-Type: application/json
+
+{
+  "userId": "usuario-de-prueba",
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "telefono": "88888888",
+  "estado": true
+}
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/perfiles/{{perfilId}}
+
+### POST/PUT de imágenes: usar Swagger con CursoId e Imagen obligatorios.
+
+GET {{NexaLearn_HostAddress}}/api/cursoimagenes
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/cursoimagenes/{{cursoImagenId}}
+
+###
+
+GET {{NexaLearn_HostAddress}}/api/cursoimagenes/{{cursoImagenId}}/contenido
+
+###
+
+DELETE {{NexaLearn_HostAddress}}/api/cursoimagenes/{{cursoImagenId}}
 
 ###
