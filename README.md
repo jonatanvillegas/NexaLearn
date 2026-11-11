@@ -123,3 +123,21 @@ Los correos se intentan enviar después de estas operaciones ya guardadas:
 
 Si SMTP no está configurado o el envío falla, la operación de usuario,
 inscripción o pago no se revierte; el error queda registrado en los logs de la API.
+
+## PayPal Sandbox
+
+El flujo de compra usa `POST /api/pagos/crear-orden` con el `cursoId` y
+`POST /api/pagos/capturar-orden` con el `orderId`. Ambos requieren JWT; el
+precio y el usuario se obtienen en la API. La respuesta de crear orden incluye
+`approvalUrl` para redirigir al estudiante a PayPal.
+
+La sección `PayPal` de `appsettings.json` ya contiene las URL y valores no
+secretos. Guarda solo las credenciales Sandbox locales con:
+
+```powershell
+dotnet user-secrets set "PayPal:ClientId" "TU_CLIENT_ID" --project ".\NexaLearn\NexaLearn.csproj"
+dotnet user-secrets set "PayPal:ClientSecret" "TU_CLIENT_SECRET" --project ".\NexaLearn\NexaLearn.csproj"
+```
+
+Después de una captura `COMPLETED`, se guarda el pago, se activa la inscripción
+y se intenta enviar el correo. Si SMTP falla, el pago no se revierte.

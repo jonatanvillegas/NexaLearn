@@ -25,6 +25,33 @@ Content-Type: application/json
 
 ###
 
+### Cliente: crear una orden de PayPal. Abre approvalUrl en el navegador.
+
+POST {{NexaLearn_HostAddress}}/api/pagos/crear-orden
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "cursoId": 1
+}
+
+### Cliente: capturar la orden después de aprobarla en PayPal.
+
+POST {{NexaLearn_HostAddress}}/api/pagos/capturar-orden
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "orderId": "PEGA_AQUI_EL_ORDER_ID"
+}
+
+### Cliente: ver mis compras.
+
+GET {{NexaLearn_HostAddress}}/api/pagos/mis-compras
+Authorization: Bearer {{token}}
+
+###
+
 GET {{NexaLearn_HostAddress}}/api/auth/actual
 Authorization: Bearer {{token}}
 

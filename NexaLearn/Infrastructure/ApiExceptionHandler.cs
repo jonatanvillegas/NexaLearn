@@ -16,6 +16,9 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problemDetailsSer
         {
             ImagenInvalidaException or ValidationException => (400, exception.Message),
             ConflictoException => (409, exception.Message),
+            PayPalException => (502, "PayPal no pudo procesar la operación."),
+            KeyNotFoundException => (404, exception.Message),
+            UnauthorizedAccessException => (403, exception.Message),
             DbUpdateConcurrencyException => (409, "El registro cambió o fue eliminado. Vuelve a consultarlo."),
             DbUpdateException { InnerException: SqlException { Number: 2601 or 2627 } }
                 => (409, "Ya existe un registro con esos datos únicos."),

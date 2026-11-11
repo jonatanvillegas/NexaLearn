@@ -31,6 +31,14 @@ builder.Services.AddScoped<ICursoImagenRepository, CursoImagenRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IImageSharp, ImageSharp>();
 builder.Services.AddScoped<ICorreoService, CorreoService>();
+builder.Services.AddScoped<IPagoService, PagoService>();
+builder.Services.AddHttpClient<IPayPalService, PayPalService>((services, client) =>
+{
+    var baseUrl = services.GetRequiredService<IConfiguration>()["PayPal:BaseUrl"];
+    client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(baseUrl)
+        ? "https://api-m.sandbox.paypal.com/" : baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
