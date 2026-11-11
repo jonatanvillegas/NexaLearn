@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using NexaLearn.DTOs;
 using NexaLearn.Identity;
+using NexaLearn.Repositories.Interfaces;
 using NexaLearn.Services;
 
 namespace NexaLearn.Controllers;
@@ -16,6 +17,7 @@ namespace NexaLearn.Controllers;
 public class AuthController(
     UserManager<IdentityUser> users,
     IConfiguration configuration,
+    IUnitOfWork unitOfWork,
     ICorreoService correoService,
     ILogger<AuthController> logger) : ControllerBase
 {
@@ -24,14 +26,40 @@ public class AuthController(
     public async Task<ActionResult<TokenDto>> Registro(RegistroDto input, CancellationToken cancellationToken)
     {
         var email = input.Email.Trim().ToLowerInvariant();
-        var user = new IdentityUser { UserName = email, Email = email };
+        var user = new IdentityUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserName = email,
+            Email = email
+        };
         var result = await users.CreateAsync(user, input.Password);
         if (!result.Succeeded)
             return BadRequest(new { errores = result.Errors.Select(error => error.Description) });
 
-        await users.AddToRoleAsync(user, RoleNames.Cliente);
+        var roleResult = await users.AddToRoleAsync(user, RoleNames.Cliente);
+        if (!roleResult.Succeeded)
+        {
+            await users.DeleteAsync(user);
+            return BadRequest(new { errores = roleResult.Errors.Select(error => error.Description) });
+        }
+
+        try
+        {
+            await unitOfWork.Perfiles.CreateAsync(new GuardarPerfilDto
+            {
+                UserId = user.Id,
+                Nombre = input.Nombre,
+                Apellido = input.Apellido
+            }, cancellationToken);
+        }
+        catch
+        {
+            await users.DeleteAsync(user);
+            throw;
+        }
+
         await EnviarCorreoAsync(email, "Bienvenido a NexaLearn",
-            "Tu usuario fue creado correctamente. Ya puedes iniciar sesión.", cancellationToken);
+            $"Hola {input.Nombre.Trim()}, tu usuario fue creado correctamente. Ya puedes iniciar sesión.", cancellationToken);
         return CreatedAtAction(nameof(Actual), await CrearTokenAsync(user));
     }
 

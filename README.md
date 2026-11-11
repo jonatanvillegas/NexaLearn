@@ -35,8 +35,10 @@ La autenticación JWT protege las rutas que usan `[Authorize]`.
 ## Identity, JWT y roles
 
 La API usa ASP.NET Core Identity local y JWT. Los roles son `Admin` y `Cliente`.
-Al iniciar, se crean los dos roles si aún no existen. El registro público crea
-usuarios con el rol `Cliente`; el usuario no puede elegir su propio rol.
+Al iniciar, se crean los dos roles si aún no existen. El registro público exige
+nombre, apellido, correo y contraseña; crea un usuario con el rol `Cliente` y
+un perfil vinculado mediante el GUID de Identity. El usuario no puede elegir su
+propio rol.
 
 Completa directamente `NexaLearn/appsettings.json`. Todas las propiedades ya
 están creadas y vacías: `ConnectionStrings:DefaultConnection`, `Jwt:Key`,
