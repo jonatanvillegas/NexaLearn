@@ -79,7 +79,7 @@ public sealed class PagoService(
             ?? throw new KeyNotFoundException("La orden de pago no existe.");
         if (!string.Equals(pago.Inscripcion.UserId, userId, StringComparison.Ordinal))
             throw new UnauthorizedAccessException("No puedes capturar una orden de otro usuario.");
-        if (string.Equals(pago.Estado, "PAGADO", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(pago.Estado, "COMPLETADO", StringComparison.OrdinalIgnoreCase))
             return new CapturarOrdenPagoResponse(pago.Id, pago.Inscripcion.CursoId, pago.Estado, pago.PayPalCaptureId);
 
         var captura = await payPal.CapturarOrdenAsync(orderId, cancellationToken);
@@ -94,7 +94,7 @@ public sealed class PagoService(
 
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         pago.PayPalCaptureId = captura.CaptureId;
-        pago.Estado = "PAGADO";
+        pago.Estado = "COMPLETADO";
         pago.FechaPago = DateTime.UtcNow;
         pago.Inscripcion.Estado = "ACTIVA";
         await context.SaveChangesAsync(cancellationToken);

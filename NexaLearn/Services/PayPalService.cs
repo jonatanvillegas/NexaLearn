@@ -104,9 +104,15 @@ public sealed class PayPalService(HttpClient client, IConfiguration configuratio
         using var request = new HttpRequestMessage(method, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer",
             await ObtenerAccessTokenAsync(cancellationToken));
+        // Crear y capturar necesitan la respuesta completa para validar monto,
+        // moneda, referencia y datos de la captura.
+        if (method == HttpMethod.Post) request.Headers.TryAddWithoutValidation("Prefer", "return=representation");
         if (!string.IsNullOrWhiteSpace(requestId)) request.Headers.Add("PayPal-Request-Id", requestId);
-        if (body is not null)
-            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        // PayPal exige Content-Type application/json al capturar, incluso cuando
+        // el endpoint no necesita datos adicionales en el cuerpo.
+        if (body is not null || method == HttpMethod.Post)
+            request.Content = new StringContent(body is null ? "{}" : JsonSerializer.Serialize(body),
+                Encoding.UTF8, "application/json");
 
         using var response = await client.SendAsync(request, cancellationToken);
         return await EnsureSuccessAsync(response, cancellationToken);
@@ -125,38 +131,62 @@ public sealed class PayPalService(HttpClient client, IConfiguration configuratio
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        var unit = root.GetProperty("purchase_units")[0];
-        var amount = unit.GetProperty("amount");
-        var approvalUrl = root.TryGetProperty("links", out var links)
+        var unit = PrimeraUnidad(root);
+        var amount = PropiedadRequerida(unit, "amount");
+        var approvalUrl = root.TryGetProperty("links", out var links) && links.ValueKind == JsonValueKind.Array
             ? links.EnumerateArray().FirstOrDefault(link =>
-                link.GetProperty("rel").GetString() is "payer-action" or "approve")
-                .GetPropertyOrNull("href")
+                link.GetStringOrNull("rel") is "payer-action" or "approve").GetStringOrNull("href")
             : null;
 
-        return new PayPalOrdenResponse(root.GetProperty("id").GetString()!, root.GetProperty("status").GetString()!,
-            approvalUrl, unit.GetProperty("reference_id").GetString(), LeerMonto(amount),
-            amount.GetProperty("currency_code").GetString()!);
+        return new PayPalOrdenResponse(TextoRequerido(root, "id"), TextoRequerido(root, "status"),
+            approvalUrl, unit.GetStringOrNull("reference_id"), LeerMonto(amount),
+            TextoRequerido(amount, "currency_code"));
     }
 
     private static PayPalCapturaResponse LeerCaptura(string json)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
-        var unit = root.GetProperty("purchase_units")[0];
-        var capture = unit.GetProperty("payments").GetProperty("captures")[0];
-        var amount = capture.GetProperty("amount");
-        return new PayPalCapturaResponse(root.GetProperty("id").GetString()!, root.GetProperty("status").GetString()!,
-            capture.GetProperty("id").GetString(), capture.GetProperty("status").GetString(),
-            unit.GetProperty("reference_id").GetString(), LeerMonto(amount), amount.GetProperty("currency_code").GetString()!);
+        var unit = PrimeraUnidad(root);
+        var payments = PropiedadRequerida(unit, "payments");
+        var captures = PropiedadRequerida(payments, "captures");
+        if (captures.ValueKind != JsonValueKind.Array || captures.GetArrayLength() == 0)
+            throw new PayPalException("PayPal no devolvió una captura.");
+        var capture = captures[0];
+        var amount = PropiedadRequerida(capture, "amount");
+        return new PayPalCapturaResponse(TextoRequerido(root, "id"), TextoRequerido(root, "status"),
+            capture.GetStringOrNull("id"), capture.GetStringOrNull("status"),
+            unit.GetStringOrNull("reference_id"), LeerMonto(amount), TextoRequerido(amount, "currency_code"));
     }
 
     private static decimal LeerMonto(JsonElement amount)
-        => decimal.Parse(amount.GetProperty("value").GetString()!, CultureInfo.InvariantCulture);
+    {
+        var value = TextoRequerido(amount, "value");
+        if (!decimal.TryParse(value, CultureInfo.InvariantCulture, out var monto))
+            throw new PayPalException("PayPal devolvió un monto inválido.");
+        return monto;
+    }
+
+    private static JsonElement PrimeraUnidad(JsonElement root)
+    {
+        var units = PropiedadRequerida(root, "purchase_units");
+        if (units.ValueKind != JsonValueKind.Array || units.GetArrayLength() == 0)
+            throw new PayPalException("PayPal no devolvió una unidad de compra.");
+        return units[0];
+    }
+
+    private static JsonElement PropiedadRequerida(JsonElement element, string property)
+        => element.TryGetProperty(property, out var value)
+            ? value : throw new PayPalException($"La respuesta de PayPal no contiene '{property}'.");
+
+    private static string TextoRequerido(JsonElement element, string property)
+        => element.GetStringOrNull(property)
+            ?? throw new PayPalException($"La respuesta de PayPal no contiene '{property}'.");
 }
 
 file static class JsonElementExtensions
 {
-    public static string? GetPropertyOrNull(this JsonElement element, string property)
+    public static string? GetStringOrNull(this JsonElement element, string property)
         => element.ValueKind == JsonValueKind.Undefined || !element.TryGetProperty(property, out var value)
             ? null : value.GetString();
 }

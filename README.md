@@ -139,5 +139,5 @@ dotnet user-secrets set "PayPal:ClientId" "TU_CLIENT_ID" --project ".\NexaLearn\
 dotnet user-secrets set "PayPal:ClientSecret" "TU_CLIENT_SECRET" --project ".\NexaLearn\NexaLearn.csproj"
 ```
 
-Después de una captura `COMPLETED`, se guarda el pago, se activa la inscripción
+Después de una captura `COMPLETED`, se guarda el pago con estado `COMPLETADO`, se activa la inscripción
 y se intenta enviar el correo. Si SMTP falla, el pago no se revierte.

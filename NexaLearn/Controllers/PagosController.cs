@@ -85,7 +85,7 @@ public class PagosController(
     }
 
     private static bool EstaPagado(string estado)
-        => string.Equals(estado, "PAGADO", StringComparison.OrdinalIgnoreCase);
+        => string.Equals(estado, "COMPLETADO", StringComparison.OrdinalIgnoreCase);
 
     [HttpPost("crear-orden")]
     public async Task<ActionResult<CrearOrdenPagoResponse>> CrearOrden(CrearOrdenPagoRequest input,
