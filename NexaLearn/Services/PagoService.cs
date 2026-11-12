@@ -117,7 +117,34 @@ public sealed class PagoService(
             string.Equals(item.Estado, "PENDIENTE", StringComparison.OrdinalIgnoreCase))
             ?? throw new ConflictoException("No existe un pago pendiente para este curso.");
 
-        var orden = await payPal.ConsultarOrdenAsync(pago.PayPalOrderId, cancellationToken);
+        PayPalOrdenResponse orden;
+        try
+        {
+            orden = await payPal.ConsultarOrdenAsync(pago.PayPalOrderId, cancellationToken);
+        }
+        catch (PayPalException exception) when (exception.Message.Contains("(404)", StringComparison.Ordinal))
+        {
+            // Una orden sandbox puede dejar de estar disponible. Se crea una nueva sin duplicar la inscripción.
+            var curso = await context.Cursos.AsNoTracking().SingleAsync(item => item.Id == input.CursoId, cancellationToken);
+            var monedaConfigurada = configuration["PayPal:Currency"];
+            var moneda = string.IsNullOrWhiteSpace(monedaConfigurada) ? "USD" : monedaConfigurada.Trim().ToUpperInvariant();
+            var referencia = $"CURSO-{curso.Id}-USUARIO-{userId}";
+            var nuevaOrden = await payPal.CrearOrdenAsync(curso.Precio, moneda, referencia, cancellationToken);
+            if (string.IsNullOrWhiteSpace(nuevaOrden.ApprovalUrl))
+                throw new PayPalException("PayPal no devolvió un enlace para continuar el pago.");
+
+            pago.Estado = "FALLIDO";
+            context.Pagos.Add(new Pago
+            {
+                InscripcionId = inscripcion.Id,
+                PayPalOrderId = nuevaOrden.OrderId,
+                Monto = curso.Precio,
+                Moneda = moneda,
+                Estado = "PENDIENTE"
+            });
+            await context.SaveChangesAsync(cancellationToken);
+            return new ReanudarOrdenPagoResponse(false, input.CursoId, nuevaOrden.Estado, nuevaOrden.ApprovalUrl);
+        }
         if (string.Equals(orden.Estado, "APPROVED", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(orden.Estado, "COMPLETED", StringComparison.OrdinalIgnoreCase))
         {
