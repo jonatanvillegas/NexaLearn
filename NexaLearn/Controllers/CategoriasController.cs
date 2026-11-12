@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Identity;
 using NexaLearn.Repositories.Interfaces;
 
@@ -19,8 +20,9 @@ public class CategoriasController : BaseController
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CategoriaDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await _repository.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<DataTableResponse<CategoriaDto>>> GetAll([FromQuery] DataTableRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await _repository.GetAllAsync(request, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CategoriaDto>> GetById(int id, CancellationToken cancellationToken)

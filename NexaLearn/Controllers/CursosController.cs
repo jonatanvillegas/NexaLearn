@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Identity;
 using NexaLearn.Repositories.Interfaces;
 
@@ -11,14 +12,39 @@ namespace NexaLearn.Controllers;
 public class CursosController(IUnitOfWork unitOfWork, IHttpContextAccessor accessor) : BaseController(accessor)
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<CursoDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await unitOfWork.Cursos.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<DataTableResponse<CursoDto>>> GetAll([FromQuery] DataTableRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await unitOfWork.Cursos.GetAllAsync(request, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CursoDto>> GetById(int id, CancellationToken cancellationToken)
     {
         var entity = await unitOfWork.Cursos.GetByIdAsync(id, cancellationToken);
         return entity is null ? NotFound() : Ok(entity);
+    }
+
+    [HttpGet("{cursoId:int}/lecciones")]
+    public async Task<ActionResult<DataTableResponse<LeccionDto>>> GetLecciones(int cursoId,
+        [FromQuery] DataTableRequest request, CancellationToken cancellationToken)
+    {
+        var curso = await unitOfWork.Cursos.GetByIdAsync(cursoId, cancellationToken);
+        if (curso is null) return NotFound();
+        return Ok(await unitOfWork.Lecciones.GetByCursoIdAsync(cursoId, request, cancellationToken));
+    }
+
+    [HttpGet("{cursoId:int}/mi-inscripcion")]
+    [Authorize]
+    public async Task<ActionResult<EstadoInscripcionCursoDto>> MiInscripcion(int cursoId,
+        CancellationToken cancellationToken)
+    {
+        var userId = ColaboradorActual?.Id;
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+        var curso = await unitOfWork.Cursos.GetByIdAsync(cursoId, cancellationToken);
+        if (curso is null) return NotFound();
+
+        var inscripcion = await unitOfWork.Inscripciones.GetByUserAndCursoAsync(userId, cursoId, cancellationToken);
+        return Ok(new EstadoInscripcionCursoDto(inscripcion is not null, inscripcion?.Estado));
     }
 
     [HttpPost, Consumes("multipart/form-data")]

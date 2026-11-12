@@ -45,6 +45,14 @@
       {
          "Name": "[Venta].[Pago]",
          "ObjectType": 0
+      },
+      {
+         "Name": "[Academico].[Inscripcion_V]",
+         "ObjectType": 3
+      },
+      {
+         "Name": "[Venta].[Pago_V]",
+         "ObjectType": 3
       }
    ],
    "UiHint": null,

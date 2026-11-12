@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.DTOs.Pagos;
 using NexaLearn.Identity;
 using NexaLearn.Repositories.Interfaces;
@@ -22,8 +23,9 @@ public class PagosController(
 {
     [HttpGet]
     [Authorize(Roles = RoleNames.Admin)]
-    public async Task<ActionResult<IReadOnlyList<PagoDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await unitOfWork.Pagos.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<DataTableResponse<PagoHistorialDto>>> GetAll([FromQuery] DataTableRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await unitOfWork.Pagos.GetAllAsync(request, cancellationToken));
 
     [HttpGet("administracion/{id:int}")]
     [Authorize(Roles = RoleNames.Admin)]
@@ -104,6 +106,15 @@ public class PagosController(
         var userId = ColaboradorActual?.Id;
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
         return Ok(await pagoService.CapturarOrdenAsync(userId, input, cancellationToken));
+    }
+
+    [HttpPost("reanudar-orden")]
+    public async Task<ActionResult<ReanudarOrdenPagoResponse>> ReanudarOrden(CrearOrdenPagoRequest input,
+        CancellationToken cancellationToken)
+    {
+        var userId = ColaboradorActual?.Id;
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+        return Ok(await pagoService.ReanudarOrdenAsync(userId, input, cancellationToken));
     }
 
     [HttpGet("mis-compras")]

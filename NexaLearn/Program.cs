@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using NexaLearn.Datatable;
 using NexaLearn.Identity;
 using NexaLearn.Infrastructure;
 using NexaLearn.Models;
@@ -39,8 +40,13 @@ builder.Services.AddHttpClient<IPayPalService, PayPalService>((services, client)
         ? "https://api-m.sandbox.paypal.com/" : baseUrl.TrimEnd('/') + "/");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<DataTableService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy => policy
+    .WithOrigins(builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:5173")
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
 
 var jwt = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwt["Key"];
@@ -127,6 +133,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors("Frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 

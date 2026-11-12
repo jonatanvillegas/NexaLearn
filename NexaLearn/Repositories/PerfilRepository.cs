@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -10,14 +12,19 @@ namespace NexaLearn.Repositories;
 public class PerfilRepository : IPerfilRepository
 {
     private readonly NexaLearnContext _context;
+    private readonly DataTableService _dataTable;
 
-    public PerfilRepository(NexaLearnContext context) => _context = context;
-
-    public async Task<IReadOnlyList<PerfilDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public PerfilRepository(NexaLearnContext context, DataTableService dataTable)
     {
-        var entities = await _context.Perfils.AsNoTracking().ToListAsync(cancellationToken);
-        return entities.Select(ToDto).ToArray();
+        _context = context;
+        _dataTable = dataTable;
     }
+
+    public Task<DataTableResponse<PerfilDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.Perfils.AsNoTracking()
+            .Select(entity => new PerfilDto(entity.Id, entity.UserId, entity.Nombre, entity.Apellido,
+                entity.Telefono, entity.FechaNacimiento, entity.FechaRegistro, entity.Estado)), request ?? new());
 
     public async Task<PerfilDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

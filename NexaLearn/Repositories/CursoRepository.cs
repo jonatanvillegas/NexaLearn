@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
 using NexaLearn.Services;
@@ -11,18 +13,20 @@ public class CursoRepository : ICursoRepository
 {
     private readonly NexaLearnContext _context;
     private readonly IImageSharp _imageSharp;
+    private readonly DataTableService _dataTable;
 
-    public CursoRepository(NexaLearnContext context, IImageSharp imageSharp)
+    public CursoRepository(NexaLearnContext context, IImageSharp imageSharp, DataTableService dataTable)
     {
         _context = context;
         _imageSharp = imageSharp;
+        _dataTable = dataTable;
     }
 
-    public async Task<IReadOnlyList<CursoDto>> GetAllAsync(CancellationToken cancellationToken = default)
-    {
-        var cursos = await _context.Cursos.AsNoTracking().ToListAsync(cancellationToken);
-        return cursos.Select(ToDto).ToArray();
-    }
+    public Task<DataTableResponse<CursoDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.Cursos.AsNoTracking()
+            .Select(curso => new CursoDto(curso.Id, curso.CategoriaId, curso.Titulo, curso.Descripcion,
+                curso.Precio, curso.Estado, curso.FechaCreacion)), request ?? new());
 
     public async Task<CursoDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -10,14 +12,22 @@ namespace NexaLearn.Repositories;
 public class LeccionRepository : ILeccionRepository
 {
     private readonly NexaLearnContext _context;
+    private readonly DataTableService _dataTable;
 
-    public LeccionRepository(NexaLearnContext context) => _context = context;
-
-    public async Task<IReadOnlyList<LeccionDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public LeccionRepository(NexaLearnContext context, DataTableService dataTable)
     {
-        var entities = await _context.Leccions.AsNoTracking().ToListAsync(cancellationToken);
-        return entities.Select(ToDto).ToArray();
+        _context = context;
+        _dataTable = dataTable;
     }
+
+    public Task<DataTableResponse<LeccionDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => GetPagedAsync(_context.Leccions.AsNoTracking(), request);
+
+    public Task<DataTableResponse<LeccionDto>> GetByCursoIdAsync(int cursoId, DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => GetPagedAsync(_context.Leccions.AsNoTracking().Where(leccion => leccion.CursoId == cursoId)
+            .OrderBy(leccion => leccion.Orden), request);
 
     public async Task<LeccionDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -67,6 +77,11 @@ public class LeccionRepository : ILeccionRepository
 
     private static LeccionDto ToDto(Leccion entity) => new(entity.Id, entity.CursoId, entity.Titulo,
         entity.Descripcion, entity.Contenido, entity.VideoUrl, entity.Orden, entity.Estado);
+
+    private Task<DataTableResponse<LeccionDto>> GetPagedAsync(IQueryable<Leccion> query, DataTableRequest? request)
+        => _dataTable.GetPagedDataAsync(query.Select(leccion => new LeccionDto(leccion.Id, leccion.CursoId,
+            leccion.Titulo, leccion.Descripcion, leccion.Contenido, leccion.VideoUrl, leccion.Orden,
+            leccion.Estado)), request ?? new());
 
     private static void Apply(Leccion entity, GuardarLeccionDto input)
     {

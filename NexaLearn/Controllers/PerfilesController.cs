@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Identity;
 using NexaLearn.Repositories.Interfaces;
 
@@ -12,8 +13,9 @@ namespace NexaLearn.Controllers;
 public class PerfilesController(IUnitOfWork unitOfWork, IHttpContextAccessor accessor) : BaseController(accessor)
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<PerfilDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await unitOfWork.Perfiles.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<DataTableResponse<PerfilDto>>> GetAll([FromQuery] DataTableRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await unitOfWork.Perfiles.GetAllAsync(request, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PerfilDto>> GetById(int id, CancellationToken cancellationToken)

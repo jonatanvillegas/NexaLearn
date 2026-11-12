@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -12,17 +14,20 @@ public class CursoImagenRepository : ICursoImagenRepository
 {
     private readonly NexaLearnContext _context;
     private readonly IImageSharp _imageSharp;
+    private readonly DataTableService _dataTable;
 
-    public CursoImagenRepository(NexaLearnContext context, IImageSharp imageSharp)
+    public CursoImagenRepository(NexaLearnContext context, IImageSharp imageSharp, DataTableService dataTable)
     {
         _context = context;
         _imageSharp = imageSharp;
+        _dataTable = dataTable;
     }
 
-    public async Task<IReadOnlyList<CursoImagenDto>> GetAllAsync(CancellationToken cancellationToken = default)
-        => await _context.CursoImagens.AsNoTracking()
+    public Task<DataTableResponse<CursoImagenDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.CursoImagens.AsNoTracking()
             .Select(imagen => new CursoImagenDto(imagen.Id, imagen.CursoId, imagen.NombreArchivo,
-                imagen.MimeType, imagen.Contenido.Length, imagen.FechaRegistro)).ToListAsync(cancellationToken);
+                imagen.MimeType, imagen.Contenido.Length, imagen.FechaRegistro)), request ?? new());
 
     public Task<CursoImagenDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         => _context.CursoImagens.AsNoTracking().Where(imagen => imagen.Id == id)

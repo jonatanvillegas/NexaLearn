@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Identity;
 using NexaLearn.Repositories.Interfaces;
 using NexaLearn.Services;
@@ -19,8 +20,9 @@ public class InscripcionesController(
     ILogger<InscripcionesController> logger) : BaseController(accessor)
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<InscripcionDto>>> GetAll(CancellationToken cancellationToken)
-        => Ok(await unitOfWork.Inscripciones.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<DataTableResponse<InscripcionHistorialDto>>> GetAll([FromQuery] DataTableRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await unitOfWork.Inscripciones.GetAllAsync(request, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<InscripcionDto>> GetById(int id, CancellationToken cancellationToken)

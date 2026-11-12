@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -10,14 +12,18 @@ namespace NexaLearn.Repositories;
 public class CategoriaRepository : ICategoriaRepository
 {
     private readonly NexaLearnContext _context;
+    private readonly DataTableService _dataTable;
 
-    public CategoriaRepository(NexaLearnContext context) => _context = context;
-
-    public async Task<IReadOnlyList<CategoriaDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public CategoriaRepository(NexaLearnContext context, DataTableService dataTable)
     {
-        var entities = await _context.Categoria.AsNoTracking().ToListAsync(cancellationToken);
-        return entities.Select(ToDto).ToArray();
+        _context = context;
+        _dataTable = dataTable;
     }
+
+    public Task<DataTableResponse<CategoriaDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.Categoria.AsNoTracking()
+            .Select(entity => new CategoriaDto(entity.Id, entity.Nombre, entity.Descripcion, entity.Estado)), request ?? new());
 
     public async Task<CategoriaDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

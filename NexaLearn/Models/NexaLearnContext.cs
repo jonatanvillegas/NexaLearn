@@ -21,9 +21,13 @@ public partial class NexaLearnContext : DbContext
 
     public virtual DbSet<Inscripcion> Inscripcions { get; set; }
 
+    public virtual DbSet<InscripcionV> InscripcionVs { get; set; }
+
     public virtual DbSet<Leccion> Leccions { get; set; }
 
     public virtual DbSet<Pago> Pagos { get; set; }
+
+    public virtual DbSet<PagoV> PagoVs { get; set; }
 
     public virtual DbSet<Perfil> Perfils { get; set; }
 
@@ -110,6 +114,26 @@ public partial class NexaLearnContext : DbContext
                 .HasConstraintName("FK_Inscripcion_Curso");
         });
 
+        modelBuilder.Entity<InscripcionV>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("Inscripcion_V", "Academico");
+
+            entity.Property(e => e.Categoria)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.NombreCompleto)
+                .IsRequired()
+                .HasMaxLength(201);
+            entity.Property(e => e.Titulo)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(450);
+        });
+
         modelBuilder.Entity<Leccion>(entity =>
         {
             entity.ToTable("Leccion", "Academico");
@@ -164,6 +188,31 @@ public partial class NexaLearnContext : DbContext
                 .HasForeignKey(d => d.InscripcionId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Pago_Inscripcion");
+        });
+
+        modelBuilder.Entity<PagoV>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("Pago_V", "Venta");
+
+            entity.Property(e => e.Cliente)
+                .IsRequired()
+                .HasMaxLength(201);
+            entity.Property(e => e.Curso)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.Estado)
+                .IsRequired()
+                .HasMaxLength(30);
+            entity.Property(e => e.GuidId)
+                .IsRequired()
+                .HasMaxLength(450);
+            entity.Property(e => e.Moneda)
+                .IsRequired()
+                .HasMaxLength(3)
+                .IsUnicode(false);
+            entity.Property(e => e.MontoPagado).HasColumnType("decimal(12, 2)");
         });
 
         modelBuilder.Entity<Perfil>(entity =>

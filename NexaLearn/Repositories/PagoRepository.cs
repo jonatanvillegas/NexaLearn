@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -10,14 +12,19 @@ namespace NexaLearn.Repositories;
 public class PagoRepository : IPagoRepository
 {
     private readonly NexaLearnContext _context;
+    private readonly DataTableService _dataTable;
 
-    public PagoRepository(NexaLearnContext context) => _context = context;
-
-    public async Task<IReadOnlyList<PagoDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public PagoRepository(NexaLearnContext context, DataTableService dataTable)
     {
-        var entities = await _context.Pagos.AsNoTracking().ToListAsync(cancellationToken);
-        return entities.Select(ToDto).ToArray();
+        _context = context;
+        _dataTable = dataTable;
     }
+
+    public Task<DataTableResponse<PagoHistorialDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.PagoVs.AsNoTracking()
+            .Select(entity => new PagoHistorialDto(entity.CursoId, entity.Curso, entity.GuidId,
+                entity.Cliente, entity.MontoPagado, entity.Moneda, entity.Estado, entity.FechaPago)), request ?? new());
 
     public async Task<PagoDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {

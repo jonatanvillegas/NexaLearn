@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using NexaLearn.Datatable;
 using NexaLearn.DTOs;
+using NexaLearn.DTOs.Datatable;
 using NexaLearn.Exceptions;
 using NexaLearn.Models;
 using NexaLearn.Repositories.Interfaces;
@@ -10,18 +12,32 @@ namespace NexaLearn.Repositories;
 public class InscripcionRepository : IInscripcionRepository
 {
     private readonly NexaLearnContext _context;
+    private readonly DataTableService _dataTable;
 
-    public InscripcionRepository(NexaLearnContext context) => _context = context;
-
-    public async Task<IReadOnlyList<InscripcionDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    public InscripcionRepository(NexaLearnContext context, DataTableService dataTable)
     {
-        var entities = await _context.Inscripcions.AsNoTracking().ToListAsync(cancellationToken);
-        return entities.Select(ToDto).ToArray();
+        _context = context;
+        _dataTable = dataTable;
     }
+
+    public Task<DataTableResponse<InscripcionHistorialDto>> GetAllAsync(DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.InscripcionVs.AsNoTracking()
+            .Select(entity => new InscripcionHistorialDto(entity.InscripcionId, entity.UserId,
+                entity.NombreCompleto, entity.CursoId, entity.Titulo, entity.CategoriaId,
+                entity.Categoria, entity.FechaInscripcion)), request ?? new());
 
     public async Task<InscripcionDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await _context.Inscripcions.AsNoTracking().SingleOrDefaultAsync(entity => entity.Id == id, cancellationToken);
+        return entity is null ? null : ToDto(entity);
+    }
+
+    public async Task<InscripcionDto?> GetByUserAndCursoAsync(string userId, int cursoId,
+        CancellationToken cancellationToken = default)
+    {
+        var entity = await _context.Inscripcions.AsNoTracking().SingleOrDefaultAsync(inscripcion =>
+            inscripcion.UserId == userId && inscripcion.CursoId == cursoId, cancellationToken);
         return entity is null ? null : ToDto(entity);
     }
 

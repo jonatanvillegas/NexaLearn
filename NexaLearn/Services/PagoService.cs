@@ -35,7 +35,10 @@ public sealed class PagoService(
             throw new ConflictoException("Ya existe una inscripción para este curso.");
         }
 
-        var moneda = (configuration["PayPal:Currency"] ?? "USD").Trim().ToUpperInvariant();
+        var monedaConfigurada = configuration["PayPal:Currency"];
+        var moneda = string.IsNullOrWhiteSpace(monedaConfigurada)
+            ? "USD"
+            : monedaConfigurada.Trim().ToUpperInvariant();
         if (moneda.Length != 3) throw new ValidationException("PayPal:Currency debe tener tres caracteres.");
         var referencia = $"CURSO-{curso.Id}-USUARIO-{userId}";
         var orden = await payPal.CrearOrdenAsync(curso.Precio, moneda, referencia, cancellationToken);
@@ -102,6 +105,30 @@ public sealed class PagoService(
 
         await EnviarConfirmacionAsync(userId, pago, cancellationToken);
         return new CapturarOrdenPagoResponse(pago.Id, pago.Inscripcion.CursoId, pago.Estado, pago.PayPalCaptureId);
+    }
+
+    public async Task<ReanudarOrdenPagoResponse> ReanudarOrdenAsync(string userId, CrearOrdenPagoRequest input,
+        CancellationToken cancellationToken = default)
+    {
+        var inscripcion = await context.Inscripcions.Include(item => item.Pagos)
+            .SingleOrDefaultAsync(item => item.UserId == userId && item.CursoId == input.CursoId, cancellationToken)
+            ?? throw new KeyNotFoundException("No existe una inscripción pendiente para este curso.");
+        var pago = inscripcion.Pagos.FirstOrDefault(item =>
+            string.Equals(item.Estado, "PENDIENTE", StringComparison.OrdinalIgnoreCase))
+            ?? throw new ConflictoException("No existe un pago pendiente para este curso.");
+
+        var orden = await payPal.ConsultarOrdenAsync(pago.PayPalOrderId, cancellationToken);
+        if (string.Equals(orden.Estado, "APPROVED", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(orden.Estado, "COMPLETED", StringComparison.OrdinalIgnoreCase))
+        {
+            var captura = await CapturarOrdenAsync(userId, new CapturarOrdenPagoRequest { OrderId = pago.PayPalOrderId },
+                cancellationToken);
+            return new ReanudarOrdenPagoResponse(true, captura.CursoId, captura.Estado, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(orden.ApprovalUrl))
+            throw new PayPalException("PayPal no devolvió un enlace para continuar el pago.");
+        return new ReanudarOrdenPagoResponse(false, input.CursoId, orden.Estado, orden.ApprovalUrl);
     }
 
     public async Task<IReadOnlyList<PagoDetalleResponse>> MisComprasAsync(string userId,
