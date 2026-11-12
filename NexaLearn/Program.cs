@@ -43,8 +43,9 @@ builder.Services.AddHttpClient<IPayPalService, PayPalService>((services, client)
 builder.Services.AddScoped<DataTableService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+var frontendUrl = (builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:5173").TrimEnd('/');
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy => policy
-    .WithOrigins(builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:5173")
+    .WithOrigins(frontendUrl)
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
