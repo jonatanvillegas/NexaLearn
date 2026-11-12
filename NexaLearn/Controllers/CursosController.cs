@@ -13,8 +13,10 @@ public class CursosController(IUnitOfWork unitOfWork, IHttpContextAccessor acces
 {
     [HttpGet]
     public async Task<ActionResult<DataTableResponse<CursoDto>>> GetAll([FromQuery] DataTableRequest request,
-        CancellationToken cancellationToken)
-        => Ok(await unitOfWork.Cursos.GetAllAsync(request, cancellationToken));
+        int? categoriaId, CancellationToken cancellationToken)
+        => Ok(categoriaId is null
+            ? await unitOfWork.Cursos.GetAllAsync(request, cancellationToken)
+            : await unitOfWork.Cursos.GetByCategoriaIdAsync(categoriaId.Value, request, cancellationToken));
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<CursoDto>> GetById(int id, CancellationToken cancellationToken)

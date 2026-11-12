@@ -28,6 +28,13 @@ public class CursoRepository : ICursoRepository
             .Select(curso => new CursoDto(curso.Id, curso.CategoriaId, curso.Titulo, curso.Descripcion,
                 curso.Precio, curso.Estado, curso.FechaCreacion)), request ?? new());
 
+    public Task<DataTableResponse<CursoDto>> GetByCategoriaIdAsync(int categoriaId, DataTableRequest? request = null,
+        CancellationToken cancellationToken = default)
+        => _dataTable.GetPagedDataAsync(_context.Cursos.AsNoTracking()
+            .Where(curso => curso.CategoriaId == categoriaId)
+            .Select(curso => new CursoDto(curso.Id, curso.CategoriaId, curso.Titulo, curso.Descripcion,
+                curso.Precio, curso.Estado, curso.FechaCreacion)), request ?? new());
+
     public async Task<CursoDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var curso = await _context.Cursos.AsNoTracking().SingleOrDefaultAsync(curso => curso.Id == id, cancellationToken);
