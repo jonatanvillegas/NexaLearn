@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -44,9 +45,20 @@ builder.Services.AddHttpClient<IPayPalService, PayPalService>((services, client)
 builder.Services.AddScoped<DataTableService>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
-var frontendUrl = (builder.Configuration["Cors:FrontendUrl"] ?? "http://localhost:5173").TrimEnd('/');
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost);
+var originsPermitidos = new[]
+{
+    builder.Configuration["Cors:FrontendUrl"],
+    builder.Configuration["Cors:ApiUrl"],
+    "https://localhost:7193",
+    "http://localhost:5025"
+}.Where(url => !string.IsNullOrWhiteSpace(url))
+    .Select(url => url!.TrimEnd('/'))
+    .Distinct(StringComparer.OrdinalIgnoreCase)
+    .ToArray();
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy => policy
-    .WithOrigins(frontendUrl)
+    .WithOrigins(originsPermitidos)
     .AllowAnyHeader()
     .AllowAnyMethod()));
 
@@ -119,6 +131,7 @@ builder.Services
 builder.Services.AddDataProtection();
 
 var app = builder.Build();
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 app.MapOpenApi();
