@@ -29,6 +29,29 @@ public class CursosController(IUnitOfWork unitOfWork, IHttpContextAccessor acces
     {
         var curso = await unitOfWork.Cursos.GetByIdAsync(cursoId, cancellationToken);
         if (curso is null) return NotFound();
+        var lecciones = await unitOfWork.Lecciones.GetByCursoIdAsync(cursoId, request, cancellationToken);
+        if (!User.IsInRole(RoleNames.Admin))
+        {
+            lecciones.data = lecciones.data.Select(leccion => leccion with
+            {
+                Contenido = null,
+                VideoUrl = null
+            }).ToList();
+        }
+        return Ok(lecciones);
+    }
+
+    [HttpGet("{cursoId:int}/mis-lecciones")]
+    [Authorize]
+    public async Task<ActionResult<DataTableResponse<LeccionDto>>> MisLecciones(int cursoId,
+        [FromQuery] DataTableRequest request, CancellationToken cancellationToken)
+    {
+        var userId = ColaboradorActual?.Id;
+        if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
+
+        var inscripcion = await unitOfWork.Inscripciones.GetByUserAndCursoAsync(userId, cursoId, cancellationToken);
+        if (!string.Equals(inscripcion?.Estado, "ACTIVA", StringComparison.OrdinalIgnoreCase)) return Forbid();
+
         return Ok(await unitOfWork.Lecciones.GetByCursoIdAsync(cursoId, request, cancellationToken));
     }
 
