@@ -1,143 +1,119 @@
 # NexaLearn
 
-API ASP.NET Core con .NET 9.
+NexaLearn es una plataforma de cursos en línea. Permite registrarse, iniciar sesión, ver cursos, comprar con PayPal y acceder a los videos después de confirmar el pago. También incluye un panel para que el administrador gestione cursos, lecciones, pagos e inscripciones.
 
-## Ejecutar la API de prueba
+## Proyectos
 
-Desde la carpeta que contiene `NexaLearn.sln`:
+Este repositorio contiene la API. El frontend está en la carpeta hermana `nexalearn-frontend`.
 
-```powershell
-dotnet run --project NexaLearn/NexaLearn.csproj --launch-profile http
-```
-
-En Visual Studio, selecciona el perfil **http** y ejecuta el proyecto.
-El navegador se abre en Swagger UI: <http://localhost:5025/swagger>.
-Expande `GET /WeatherForecast`, pulsa **Try it out** y luego **Execute** para probar la API.
-Este endpoint de ejemplo es público y devuelve cinco pronósticos sin consultar SQL Server.
-
-El documento OpenAPI está disponible en <http://localhost:5025/openapi/v1.json>
-en el entorno Development, al igual que Swagger UI.
-También puedes ejecutar las solicitudes de `NexaLearn/NexaLearn.http`.
-
-## HTTPS y autenticación
-
-Para usar el perfil **https**, configura primero el certificado local:
-
-```powershell
-dotnet dev-certs https --trust
-dotnet run --project NexaLearn/NexaLearn.csproj --launch-profile https
-```
-
-Con ese perfil, Swagger UI está en <https://localhost:7193/swagger>.
-
-La autenticación JWT protege las rutas que usan `[Authorize]`.
-
-## Identity, JWT y roles
-
-La API usa ASP.NET Core Identity local y JWT. Los roles son `Admin` y `Cliente`.
-Al iniciar, se crean los dos roles si aún no existen. El registro público exige
-nombre, apellido, correo y contraseña; crea un usuario con el rol `Cliente` y
-un perfil vinculado mediante el GUID de Identity. El usuario no puede elegir su
-propio rol.
-
-Completa directamente `NexaLearn/appsettings.json`. Todas las propiedades ya
-están creadas y vacías: `ConnectionStrings:DefaultConnection`, `Jwt:Key`,
-`Identity:AdministradorInicial:Email` e
-`Identity:AdministradorInicial:Password`.
-
-`Jwt:Key` debe tener al menos 32 caracteres. Para generar una clave compatible
-con la consola de Visual Studio:
-
-```powershell
-$jwtKeyBytes = New-Object byte[] 48
-$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-$rng.GetBytes($jwtKeyBytes)
-$rng.Dispose()
-[Convert]::ToBase64String($jwtKeyBytes)
-```
-
-Copia el resultado en `Jwt:Key`. Al iniciar, si el correo de
-`AdministradorInicial` no existe, se crea y recibe el rol `Admin`. Si ya existe,
-se le asigna ese rol.
-
-La base de datos necesita las tablas de Identity, que ya tienen una migración
-en el proyecto. Aplícala una sola vez contra tu base de desarrollo:
-
-```powershell
-dotnet ef database update --project NexaLearn/NexaLearn.csproj --context ApplicationIdentityDbContext
-```
-
-| Método | Ruta | Acceso |
+| Proyecto | Tecnología | Dirección local |
 | --- | --- | --- |
-| POST | `/api/auth/registro` | Público; crea un Cliente |
-| POST | `/api/auth/login` | Público; devuelve JWT y roles |
-| GET | `/api/auth/actual` | JWT válido |
-| PUT | `/api/auth/usuarios/{userId}/rol` | Solo Admin |
+| API | ASP.NET Core 9 | `https://localhost:7193` |
+| Frontend | React + Vite | `http://localhost:5173` |
 
-Para enviar el JWT fuera de Swagger usa el encabezado:
+## Requisitos
 
-```http
-Authorization: Bearer tu_token
-```
+- .NET SDK 9
+- Node.js 20 o superior
+- SQL Server
 
-Swagger muestra el botón **Authorize**. Pega solo el token, sin escribir
-`Bearer`. Las consultas GET del catálogo de categorías, cursos, lecciones e
-imágenes son públicas. Crear, actualizar o eliminar categorías, cursos,
-lecciones e imágenes requiere `Admin`. Inscripciones, pagos y perfiles también
-son rutas administrativas y requieren `Admin`. Un Cliente recibe HTTP 403 al
-intentarlas y una solicitud sin token recibe HTTP 401.
+## Ejecutar de forma local
 
-## Configuración de correo
+### 1. Configurar la API
 
-Inyecta `ICorreoService` y usa un único método:
+En `NexaLearn/appsettings.json` completa los valores necesarios para tu base de datos, JWT y correo. También puedes usar `user-secrets` para las claves privadas.
 
-```csharp
-await correoService.EnviarAsync(
-    "destino@ejemplo.com",
-    "Inscripción confirmada",
-    "Hola Ana, tu inscripción fue registrada.",
-    cancellationToken);
-```
-
-Completa la sección `Smtp` de `NexaLearn/appsettings.json`:
+Valores mínimos:
 
 ```json
-"Smtp": {
-  "Host": "smtp.tuproveedor.com",
-  "Puerto": 587,
-  "UsarSsl": true,
-  "Remitente": "notificaciones@tudominio.com",
-  "Usuario": "tu-usuario",
-  "Clave": "tu-clave-o-contrasena-de-aplicacion"
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "TU_CADENA_DE_SQL_SERVER"
+  },
+  "Jwt": {
+    "Key": "UNA_CLAVE_DE_AL_MENOS_32_CARACTERES"
+  },
+  "Identity": {
+    "AdministradorInicial": {
+      "Email": "admin@ejemplo.com",
+      "Password": "UnaClaveSegura2026"
+    }
+  }
 }
 ```
 
-La plantilla está en
-`NexaLearn/Templates/Correo.html`; `{0}` es el asunto y `{1}` el contenido.
+### 2. Preparar la base de datos
 
-Los correos se intentan enviar después de estas operaciones ya guardadas:
-
-- Registro de usuario: mensaje de bienvenida.
-- Creación de inscripción: confirmación con el título del curso.
-- Pago creado con estado `PAGADO`, o pago actualizado desde otro estado a `PAGADO`: confirmación del pago.
-
-Si SMTP no está configurado o el envío falla, la operación de usuario,
-inscripción o pago no se revierte; el error queda registrado en los logs de la API.
-
-## PayPal Sandbox
-
-El flujo de compra usa `POST /api/pagos/crear-orden` con el `cursoId` y
-`POST /api/pagos/capturar-orden` con el `orderId`. Ambos requieren JWT; el
-precio y el usuario se obtienen en la API. La respuesta de crear orden incluye
-`approvalUrl` para redirigir al estudiante a PayPal.
-
-La sección `PayPal` de `appsettings.json` ya contiene las URL y valores no
-secretos. Guarda solo las credenciales Sandbox locales con:
+1. Crea una base de datos vacía llamada `NexaLearn` en SQL Server.
+2. Aplica las migraciones de Identity:
 
 ```powershell
-dotnet user-secrets set "PayPal:ClientId" "TU_CLIENT_ID" --project ".\NexaLearn\NexaLearn.csproj"
-dotnet user-secrets set "PayPal:ClientSecret" "TU_CLIENT_SECRET" --project ".\NexaLearn\NexaLearn.csproj"
+dotnet ef database update --project .\NexaLearn\NexaLearn.csproj --context ApplicationIdentityDbContext
 ```
 
-Después de una captura `COMPLETED`, se guarda el pago con estado `COMPLETADO`, se activa la inscripción
-y se intenta enviar el correo. Si SMTP falla, el pago no se revierte.
+3. Abre `NexaLearn/NexaLearn.sql` con SQL Server Management Studio y ejecútalo sobre la base de datos `NexaLearn`.
+
+Este orden es importante: primero Identity y después el script SQL de cursos, categorías, pagos e inscripciones.
+
+Para PayPal Sandbox agrega:
+
+```powershell
+dotnet user-secrets set "PayPal:ClientId" "TU_CLIENT_ID" --project .\NexaLearn\NexaLearn.csproj
+dotnet user-secrets set "PayPal:ClientSecret" "TU_CLIENT_SECRET" --project .\NexaLearn\NexaLearn.csproj
+dotnet user-secrets set "PayPal:ReturnUrl" "http://localhost:5173/pago/confirmado" --project .\NexaLearn\NexaLearn.csproj
+dotnet user-secrets set "PayPal:CancelUrl" "http://localhost:5173/home" --project .\NexaLearn\NexaLearn.csproj
+```
+
+Confía el certificado HTTPS local y ejecuta la API:
+
+```powershell
+dotnet dev-certs https --trust
+dotnet run --project .\NexaLearn\NexaLearn.csproj --launch-profile https
+```
+
+La documentación estará disponible en:
+
+```text
+https://localhost:7193/docs
+```
+
+
+
+## Usuarios y roles
+
+- `Admin`: crea cursos y lecciones; revisa pagos e inscripciones.
+- `Cliente`: compra cursos y puede ver los videos de los cursos con inscripción activa.
+
+El usuario administrador se crea al iniciar la API si llenas `Identity:AdministradorInicial`.
+
+## Carpetas principales de la API
+
+| Carpeta | Uso |
+| --- | --- |
+| `Controllers` | Endpoints de la API. |
+| `DTOs` | Datos que entran y salen de los endpoints. |
+| `Repositories` | Consultas y guardado de datos. |
+| `Services` | Acciones como pagos PayPal, correo e imágenes. |
+| `Models` | Entidades y conexión con la base de datos. |
+| `Identity` | Usuarios, roles y autenticación. |
+| `Datatable` | Paginación de listados. |
+| `Infrastructure` | Manejo general de errores. |
+| `Templates` | Plantilla HTML usada para correos. |
+| `Properties` | Configuración para iniciar el proyecto localmente. |
+
+## Publicar con Docker
+
+La API usa el `Dockerfile` de este repositorio. El frontend tiene su propio `Dockerfile` dentro de `nexalearn-frontend`.
+
+En producción configura estas variables:
+
+```env
+
+# API
+Cors__FrontendUrl=https://tu-frontend.com
+PayPal__ClientId=TU_CLIENT_ID
+PayPal__ClientSecret=TU_CLIENT_SECRET
+PayPal__Currency=USD
+PayPal__ReturnUrl=https://tu-frontend.com/pago/confirmado
+PayPal__CancelUrl=https://tu-frontend.com/home
+```
