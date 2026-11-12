@@ -10,6 +10,7 @@ using NexaLearn.Models;
 using NexaLearn.Repositories;
 using NexaLearn.Repositories.Interfaces;
 using NexaLearn.Services;
+using Scalar.AspNetCore;
 using System;
 using System.Security.Claims;
 using System.Text;
@@ -119,18 +120,29 @@ builder.Services.AddDataProtection();
 
 var app = builder.Build();
 app.UseExceptionHandler();
-await IdentitySeeder.SeedAsync(app.Services, builder.Configuration);
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+app.MapOpenApi();
+
+app.MapScalarApiReference("/docs", options =>
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "NexaLearn API v1");
-        options.DocumentTitle = "NexaLearn API";
-    });
-}
+    options
+        .WithTitle("NexaLearn API")
+        .WithClassicLayout()
+        .ForceDarkMode();
+});
+
+await IdentitySeeder.SeedAsync(app.Services, builder.Configuration);
+    
+//// Configure the HTTP request pipeline.
+//if (app.Environment.IsDevelopment())
+//{
+//    app.MapOpenApi();
+//    app.UseSwaggerUI(options =>
+//    {
+//        options.SwaggerEndpoint("/openapi/v1.json", "NexaLearn API v1");
+//        options.DocumentTitle = "NexaLearn API";
+//    });
+//}
 
 app.UseHttpsRedirection();
 
